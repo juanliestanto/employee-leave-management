@@ -9,15 +9,21 @@ module.exports = (mongoose) => {
       birth_place: String,
       address: String,
       division: String,
-      total_leave: Number,
+      total_leave: {
+        type: Number,
+        default: 0
+      },
       leave_available: {
         type: Number,
-        validate: {
-            validator: function (value) {
-                return value <= this.total_leave;
-            },
-            message: "Leave Available must be less than or equals total leave"
-        }
+        default: 0
+      },
+      leave_active: {
+        type: Number,
+        default: 0
+      },
+      is_leave: {
+        type : Boolean,
+        default: false
       }
     },
     {

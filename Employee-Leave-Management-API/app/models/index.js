@@ -4,6 +4,5 @@ const mongoose = require("mongoose");
 module.exports = {
     mongoose,
     url:  dbConfig.url,
-    employee: require('./employee')(mongoose),
-    transaction: require('./transaction')(mongoose)
+    employee: require('./employee')(mongoose)
 }

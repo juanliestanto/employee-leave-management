@@ -1,5 +1,6 @@
 const db = require("../models");
 const dayjs = require("dayjs");
+const mongoose = require("mongoose");
 const Employee = db.employee;
 
 const formattedEmployees = (employee) => {
@@ -15,6 +16,8 @@ const formattedEmployees = (employee) => {
     division: employee.division,
     totalLeave: employee.total_leave,
     leaveAvailable: employee.leave_available,
+    leaveActive: employee.leave_active,
+    isLeave: employee.is_leave,
   };
 };
 
@@ -82,55 +85,71 @@ exports.findById = (req, res) => {
     });
 };
 
-exports.update = (req, res) => {
-  const employeeId = req.params.id;
+exports.update = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const employeeId = req.params.id;
 
-  req.body.birth_date = new Date(req.body.birth_date);
+    req.body.birth_date = new Date(req.body.birth_date);
 
-  Employee.findByIdAndUpdate(employeeId, req.body)
-    .then((employee) => {
-      if (!employee) {
-        return res
-          .status(404)
-          .json({ status: 404, message: "Data employee not found" });
-      }
-
-      res.status(200).json({
-        status: 200,
-        message: "Successfully update employee data By Id",
-        data: formattedEmployees(employee),
-      });
-    })
-    .catch((err) => {
-      res.status(500).json({
-        status: 500,
-        message: "Failed to update employee data By Id",
-        error: err.message,
-      });
+    const employee = await Employee.findByIdAndUpdate(employeeId, req.body, {
+      new: true,
+      session,
     });
+
+    if (!employee) {
+      session.abortTransaction();
+      session.endSession();
+      return res
+        .status(404)
+        .json({ status: 404, message: "Data employee not found" });
+    }
+
+    if (employee.leave_available < employee.leave_active) {
+      session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ status: 400, message: "Data bad request" });
+    }
+
+    employee.leave_available -= employee.leave_active;
+    await employee.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json({
+      status: 200,
+      message: "Successfully update employee data By Id",
+      data: formattedEmployees(employee),
+    });
+  } catch (error) {
+    session.abortTransaction();
+    session.endSession();
+    res.status(500).json({ status: 500, message: "Internal Server Error" });
+  }
 };
 
-exports.delete = (req, res) => {
-  const employeeId = req.params.id;
+exports.delete = async (req, res) => {
+  try {
+    const employeeId = req.params.id;
 
-  Employee.findByIdAndDelete(employeeId)
-    .then((employee) => {
-      if (!employee) {
-        return res
-          .status(404)
-          .json({ status: 404, message: "Data employee not found" });
-      }
+    const employee = await Employee.findByIdAndDelete(employeeId);
+    if (!employee) {
+      return res
+        .status(404)
+        .json({ status: 404, message: "Data employee not found" });
+    }
 
-      res.status(200).json({
-        status: 200,
-        message: "Successfully delete employee data By Id",
-      });
-    })
-    .catch((err) => {
-      res.status(500).json({
-        status: 500,
-        message: "Failed to delete employee data By Id",
-        error: err.message,
-      });
+    res.status(200).json({
+      status: 200,
+      message: "Successfully delete employee data By Id",
     });
+  } catch (err) {
+    res.status(500).json({
+      status: 500,
+      message: "Failed to delete employee data By Id",
+      error: err.message,
+    });
+  }
 };

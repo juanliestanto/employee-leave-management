@@ -1,3 +1,3 @@
 module.exports = {
-    url: "YOUR_MONGODB_SERVER"
+    url: "YOUR_MONGODB_URL"
 }

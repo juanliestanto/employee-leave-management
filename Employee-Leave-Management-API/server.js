@@ -27,7 +27,6 @@ db.mongoose
 
 //register routes
 require("./app/routes/employee.routes")(app);
-require("./app/routes/transaction.routes")(app);
 
 const PORT = 8000;
 app.listen(PORT, () => console.log(`server started on port ${PORT}`));
